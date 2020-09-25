@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:ext_storage/ext_storage.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
-
-import 'package:permission_handler/permission_handler.dart';
+import 'package:open_file/open_file.dart';
 
 void main() => runApp(MyApp());
 
@@ -38,12 +37,6 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  void getPermission() async {
-    print("getPermission");
-    Map<PermissionGroup, PermissionStatus> permissions =
-        await PermissionHandler().requestPermissions([PermissionGroup.storage]);
-  }
-
   void inicializar() async {
     WidgetsFlutterBinding.ensureInitialized();
     await FlutterDownloader.initialize(
@@ -53,7 +46,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void initState() {
-    getPermission();
     inicializar();
     super.initState();
   }
@@ -76,21 +68,24 @@ class _MyHomePageState extends State<MyHomePage> {
           children: <Widget>[
             RaisedButton(
                 onPressed: () async {
+                  //descargamos el archivo
+
                   String path =
                       await ExtStorage.getExternalStoragePublicDirectory(
                           ExtStorage.DIRECTORY_DOWNLOADS);
 
-                  //String fullPath = "$path/test.jpg";
-
-                  final taskId = await FlutterDownloader.enqueue(
+                  await FlutterDownloader.enqueue(
                     url:
                         'http://cdn2.afterdawn.fi/screenshots/normal/12469.jpg',
                     savedDir: path,
                     showNotification:
-                        true, // show download progress in status bar (for Android)
+                        false, // show download progress in status bar (for Android)
                     openFileFromNotification:
-                        true, // click on notification to open downloaded file (for Android)
+                        false, // click on notification to open downloaded file (for Android)
                   );
+
+                  //habrimos el archivo
+                  OpenFile.open(path + "/12469.jpg");
                 },
                 child: Text('Dowload')),
             Text(
