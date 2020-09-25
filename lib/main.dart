@@ -1,104 +1,112 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+
+import 'package:ext_storage/ext_storage.dart';
+import 'package:flutter_downloader/flutter_downloader.dart';
+
 import 'package:permission_handler/permission_handler.dart';
 
-Future main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Permission.camera.request();
-  runApp(new MyApp());
+void main() => runApp(MyApp());
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Flutter Demo',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: MyHomePage(title: 'Flutter Demo Home Page'),
+    );
+  }
 }
 
-class MyApp extends StatefulWidget {
+class MyHomePage extends StatefulWidget {
+  MyHomePage({Key key, this.title}) : super(key: key);
+
+  final String title;
+
   @override
-  _MyAppState createState() => new _MyAppState();
+  _MyHomePageState createState() => _MyHomePageState();
 }
 
-class _MyAppState extends State<MyApp> {
-  InAppWebViewController webView;
-  String url = "";
-  double progress = 0;
+class _MyHomePageState extends State<MyHomePage> {
+  int _counter = 0;
 
-  @override
-  void initState() {
-    super.initState();
+  void _incrementCounter() {
+    setState(() {
+      _counter++;
+    });
+  }
+
+  void getPermission() async {
+    print("getPermission");
+    Map<PermissionGroup, PermissionStatus> permissions =
+        await PermissionHandler().requestPermissions([PermissionGroup.storage]);
+  }
+
+  void inicializar() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    await FlutterDownloader.initialize(
+        debug: true // optional: set false to disable printing logs to console
+        );
   }
 
   @override
-  void dispose() {
-    super.dispose();
+  void initState() {
+    getPermission();
+    inicializar();
+    super.initState();
+  }
+
+  void showDownloadProgress(received, total) {
+    if (total != -1) {
+      print((received / total * 100).toStringAsFixed(0) + "%");
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('InAppWebView Example'),
-        ),
-        body: Container(
-            child: Column(children: <Widget>[
-          Container(
-              padding: EdgeInsets.all(10.0),
-              child: progress < 1.0
-                  ? LinearProgressIndicator(value: progress)
-                  : Container()),
-          Expanded(
-            child: Container(
-              padding: EdgeInsets.all(0),
-              margin: const EdgeInsets.all(10.0),
-              decoration:
-                  BoxDecoration(border: Border.all(color: Colors.black)),
-              child: InAppWebView(
-                //initialUrl: "https://flutter.dev/",
-                initialUrl:
-                    "http://www.gacetaoficialdebolivia.gob.bo/normas/buscar/2106",
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.title),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            RaisedButton(
+                onPressed: () async {
+                  String path =
+                      await ExtStorage.getExternalStoragePublicDirectory(
+                          ExtStorage.DIRECTORY_DOWNLOADS);
 
-                //initialUrl: "https://www.aj.gob.bo/",
+                  //String fullPath = "$path/test.jpg";
 
-                initialHeaders: {},
-                initialOptions: InAppWebViewGroupOptions(
-                    crossPlatform: InAppWebViewOptions(
-                  debuggingEnabled: true,
-                  useOnDownloadStart: true,
-                )),
-
-                onWebViewCreated: (InAppWebViewController controller) {
-                  webView = controller;
+                  final taskId = await FlutterDownloader.enqueue(
+                    url:
+                        'http://cdn2.afterdawn.fi/screenshots/normal/12469.jpg',
+                    savedDir: path,
+                    showNotification:
+                        true, // show download progress in status bar (for Android)
+                    openFileFromNotification:
+                        true, // click on notification to open downloaded file (for Android)
+                  );
                 },
-                onLoadStart: (InAppWebViewController controller, String url) {
-                  setState(() {
-                    this.url = url;
-                  });
-                },
-                onLoadStop:
-                    (InAppWebViewController controller, String url) async {
-                  setState(() {
-                    this.url = url;
-                  });
-                },
-                onReceivedServerTrustAuthRequest:
-                    (InAppWebViewController controller,
-                        ServerTrustChallenge challenge) async {
-                  return ServerTrustAuthResponse(
-                      action: ServerTrustAuthResponseAction.PROCEED);
-                },
-
-                onDownloadStart: (controller, url) async {
-                  setState(() {
-                    this.url = url;
-                  });
-                },
-                onProgressChanged:
-                    (InAppWebViewController controller, int progress) {
-                  setState(() {
-                    this.progress = progress / 100;
-                  });
-                },
-              ),
+                child: Text('Dowload')),
+            Text(
+              'You have pushed the button this many times:',
             ),
-          ),
-        ])),
+            Text(
+              '$_counter',
+              style: Theme.of(context).textTheme.display1,
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _incrementCounter,
+        tooltip: 'Increment',
+        child: Icon(Icons.add),
       ),
     );
   }
