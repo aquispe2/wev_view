@@ -1,7 +1,9 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:ext_storage/ext_storage.dart';
-import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:open_file/open_file.dart';
 
 void main() => runApp(MyApp());
@@ -37,16 +39,10 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  void inicializar() async {
-    WidgetsFlutterBinding.ensureInitialized();
-    await FlutterDownloader.initialize(
-        debug: true // optional: set false to disable printing logs to console
-        );
-  }
+
 
   @override
   void initState() {
-    inicializar();
     super.initState();
   }
 
@@ -74,18 +70,13 @@ class _MyHomePageState extends State<MyHomePage> {
                       await ExtStorage.getExternalStoragePublicDirectory(
                           ExtStorage.DIRECTORY_DOWNLOADS);
 
-                  await FlutterDownloader.enqueue(
-                    url:
-                        'http://cdn2.afterdawn.fi/screenshots/normal/12469.jpg',
-                    savedDir: path,
-                    showNotification:
-                        false, // show download progress in status bar (for Android)
-                    openFileFromNotification:
-                        false, // click on notification to open downloaded file (for Android)
-                  );
-
-                  //habrimos el archivo
+                  String url_file =
+                      'http://cdn2.afterdawn.fi/screenshots/normal/12469.jpg';
+                  String respuesta =
+                      await downloadFile(url_file, "12469.jpg", path);
                   OpenFile.open(path + "/12469.jpg");
+
+                  print("respuesta de descarga : " + respuesta);
                 },
                 child: Text('Dowload')),
             Text(
@@ -104,5 +95,28 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Icon(Icons.add),
       ),
     );
+  }
+
+  Future<String> downloadFile(String url, String fileName, String dir) async {
+    print("url: " + url);
+    HttpClient httpClient = new HttpClient();
+    File file;
+    String filePath = '';
+
+    try {
+      var request = await httpClient.getUrl(Uri.parse(url));
+      var response = await request.close();
+      if (response.statusCode == 200) {
+        var bytes = await consolidateHttpClientResponseBytes(response);
+        filePath = '$dir/$fileName';
+        file = File(filePath);
+        await file.writeAsBytes(bytes);
+      } else
+        filePath = 'Error code: ' + response.statusCode.toString();
+    } catch (ex) {
+      filePath = 'Can not fetch url: ' + ex.toString();
+    }
+
+    return filePath;
   }
 }
